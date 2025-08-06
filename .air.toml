@@ -1,0 +1,12 @@
+root = "."
+tmp_dir = ".air"
+bin = "main"
+cmd = ".air/main"
+
+include_ext = ["go", "tpl", "tmpl", "html"]
+exclude_dir = ["vendor", "node_modules", "tmp", ".git", ".air"]
+
+[build]
+  cmd = "go build -o .air/main main.go"
+  bin = ".air/main"
+  full_bin = ".air/main"

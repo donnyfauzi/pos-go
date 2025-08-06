@@ -2,13 +2,14 @@ package services
 
 import (
 	"pos-go/config"
+	"pos-go/dto"
 	user_model "pos-go/models/user_model"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService interface {
-	Register(input user_model.User) (user_model.User, error)
+	Register(input dto.RegisterDTO) (user_model.User, error)
 }
 
 type authService struct{}
@@ -17,7 +18,7 @@ func NewAuthService() AuthService {
 	return &authService{}
 }
 
-func (s *authService) Register(input user_model.User) (user_model.User, error) {
+func (s *authService) Register(input dto.RegisterDTO) (user_model.User, error) {
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {

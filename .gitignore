@@ -14,9 +14,11 @@ Thumbs.db
 *.test
 
 # Logs
+.air/
+tmp/
 *.log
 
-# Env & Secrets
+# Env 
 .env
 
 # Go cache & tmp
