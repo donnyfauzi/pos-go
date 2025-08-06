@@ -1,0 +1,25 @@
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Dependency Cache & Binary
+/vendor/
+/bin/
+/build/
+/dist/
+*.exe
+*.out
+*.test
+
+# Logs
+*.log
+
+# Env & Secrets
+.env
+
+# Go cache & tmp
+*.mod~
+*.sum~
+.gocache/
