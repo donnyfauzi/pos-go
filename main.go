@@ -4,6 +4,7 @@ import (
 	"log"
 	"pos-go/config"
 	"pos-go/routes"
+	"pos-go/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,9 +20,7 @@ func main() {
 	routes.AuthRoutes(r)
 
 	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "API is running",
-		})
+		utils.SuccessResponseOK(c, "API is running", nil)
 	})
 
 	log.Println("Server berjalan di http://localhost:8080")
