@@ -5,6 +5,7 @@ import (
 	"pos-go/config"
 	"pos-go/dto"
 	user_model "pos-go/models/user_model"
+	"pos-go/utils"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -12,13 +13,17 @@ import (
 
 // Sentinel errors untuk membedakan jenis kegagalan di service
 var (
-	ErrEmailAlreadyExists = errors.New("email already exists")
-	ErrHashPasswordFailed = errors.New("hash password failed")
-	ErrCreateUserFailed   = errors.New("create user failed")
+	ErrEmailAlreadyExists = errors.New("Email sudah terdaftar")
+	ErrHashPasswordFailed = errors.New("Gagal memproses password")
+	ErrCreateUserFailed   = errors.New("Gagal membuat user baru")
+	ErrInvalidCredentials = errors.New("Email atau password salah")
+	ErrInvalidOldPassword = errors.New("Password lama tidak cocok")
 )
 
 type AuthService interface {
 	Register(input dto.RegisterDTO) (user_model.User, error)
+	Login(input dto.LoginDTO) (user_model.User, string, error)
+	ChangePassword(userID string, input dto.ChangePasswordDTO) error 
 }
 
 type authService struct{}
@@ -58,6 +63,66 @@ func (s *authService) Register(input dto.RegisterDTO) (user_model.User, error) {
 	}
 
 	return user, nil
+}
+
+func (s *authService) Login(input dto.LoginDTO) (user_model.User, string, error) {
+	// 1. Cari user berdasarkan email
+	var user user_model.User
+	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// User tidak ditemukan
+			return user_model.User{}, "", ErrInvalidCredentials
+		}
+		// Error lain dari database
+		return user_model.User{}, "", ErrCreateUserFailed
+	}
+
+	// 2. Bandingkan password
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
+	if err != nil {
+		// Password tidak cocok
+		return user_model.User{}, "", ErrInvalidCredentials
+	}
+
+	// 3. Generate JWT token
+	token, err := utils.GenerateToken(user.ID.String(), user.Email, user.Role)
+	if err != nil {
+		return user_model.User{}, "", ErrCreateUserFailed
+	}
+
+	// 4. Return user dan token
+	return user, token, nil
+}
+
+func (s *authService) ChangePassword(userID string, input dto.ChangePasswordDTO) error {
+	// 1. Cari user berdasarkan ID
+	var user user_model.User
+	if err := config.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrCreateUserFailed
+		}
+		return ErrCreateUserFailed
+	}
+
+	// 2. Verify old password
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.OldPassword))
+	if err != nil {
+		return ErrInvalidOldPassword
+	}
+
+	// 3. Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return ErrHashPasswordFailed
+	}
+
+	// 4. Update password
+	user.Password = string(hashedPassword)
+	if err := config.DB.Save(&user).Error; err != nil {
+		return ErrCreateUserFailed
+	}
+
+	return nil
 }
 
 

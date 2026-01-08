@@ -65,3 +65,8 @@ func ErrorResponseConflict(c *gin.Context, message string) {
 func ErrorResponseInternal(c *gin.Context, message string) {
     ErrorResponse(c, http.StatusInternalServerError, message, nil)
 }
+
+// Response error 403 ("ex:Akses ditolak")
+func ErrorResponseForbidden(c *gin.Context, message string) {
+    ErrorResponse(c, http.StatusForbidden, message, nil)
+}
