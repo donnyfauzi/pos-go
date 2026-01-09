@@ -198,3 +198,22 @@ func ChangePassword(c *gin.Context) {
 	utils.SuccessResponseOK(c, "Password berhasil diubah", nil)
 }
 
+func GetCurrentUser(c *gin.Context) {
+	// Ambil user_id dari context (dari AuthMiddleware)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponseUnauthorized(c, "User ID tidak ditemukan")
+		return
+	}
+
+	// Get user dari database
+	user, err := authService.GetCurrentUser(userID.(string))
+	if err != nil {
+		utils.ErrorResponseUnauthorized(c, "User tidak ditemukan")
+		return
+	}
+
+	// Return user
+	utils.SuccessResponseOK(c, "User berhasil ditemukan", user)
+}
+

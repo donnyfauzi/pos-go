@@ -23,7 +23,8 @@ var (
 type AuthService interface {
 	Register(input dto.RegisterDTO) (user_model.User, error)
 	Login(input dto.LoginDTO) (user_model.User, string, error)
-	ChangePassword(userID string, input dto.ChangePasswordDTO) error 
+	ChangePassword(userID string, input dto.ChangePasswordDTO) error
+	GetCurrentUser(userID string) (user_model.User, error)
 }
 
 type authService struct{}
@@ -123,6 +124,18 @@ func (s *authService) ChangePassword(userID string, input dto.ChangePasswordDTO)
 	}
 
 	return nil
+}
+
+func (s *authService) GetCurrentUser(userID string) (user_model.User, error) {
+	var user user_model.User
+	if err := config.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return user_model.User{}, ErrCreateUserFailed
+		}
+		return user_model.User{}, ErrCreateUserFailed
+	}
+
+	return user, nil
 }
 
 

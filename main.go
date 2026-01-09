@@ -3,10 +3,11 @@ package main
 import (
 	"log"
 	"pos-go/config"
+	database "pos-go/database/migrations"
 	"pos-go/routes"
 	"pos-go/utils"
-	"pos-go/database/migrations"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,6 +23,16 @@ func main() {
 
 	// Inisialisasi Gin
 	r := gin.Default()
+
+	// CORS Middleware 
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"}, 
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true, //untuk cookie!
+		MaxAge:           12 * 3600, // 12 jam
+	}))
 
 	// Set trusted proxies (hilangkan proxy warning)
 	r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
