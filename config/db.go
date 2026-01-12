@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 
+	category_model "pos-go/models/category_model"
+	menu_model "pos-go/models/menu_model"
 	user_model "pos-go/models/user_model"
 
 	"github.com/joho/godotenv"
@@ -40,8 +42,12 @@ func ConnectDatabase() {
 
 	log.Println("Berhasil terhubung ke database PostgreSQL")
 
-	// AutoMigrate tabel user
-	err = database.AutoMigrate(&user_model.User{})
+	// AutoMigrate tabel
+	err = database.AutoMigrate(
+		&user_model.User{},
+		&category_model.Category{},
+		&menu_model.Menu{},
+	)
 	if err != nil {
 		log.Fatal("Migrasi gagal:", err)
 	}

@@ -24,6 +24,9 @@ func main() {
 	// Inisialisasi Gin
 	r := gin.Default()
 
+	// Static file handler untuk serve uploaded images
+	r.Static("/uploads", "./uploads")
+
 	// CORS Middleware 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"}, 
@@ -39,9 +42,11 @@ func main() {
 
 	// Setup routes
 	routes.AuthRoutes(r)
+	routes.CategoryRoutes(r)
+	routes.MenuRoutes(r)
 
 	r.GET("/ping", func(c *gin.Context) {
-		utils.SuccessResponseOK(c, "API is running", nil)
+		utils.SuccessResponseOK(c, "API sukses berjalan", nil)
 	})
 
 	log.Println("Server berjalan di http://localhost:8080")
