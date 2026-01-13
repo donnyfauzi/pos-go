@@ -17,6 +17,7 @@ var (
 
 type CategoryService interface {
 	CreateCategory(input dto.CreateCategoryDTO) (category_model.Category, error)
+	GetAllCategories() ([]category_model.Category, error)
 }
 
 type categoryService struct{}
@@ -47,4 +48,14 @@ func (s *categoryService) CreateCategory(input dto.CreateCategoryDTO) (category_
 	}
 
 	return category, nil
+}
+
+func (s *categoryService) GetAllCategories() ([]category_model.Category, error) {
+	var categories []category_model.Category
+	
+	if err := config.DB.Find(&categories).Error; err != nil {
+		return nil, ErrCreateCategoryFailed 
+	}
+	
+	return categories, nil
 }

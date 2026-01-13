@@ -67,6 +67,10 @@ func CreateMenu(c *gin.Context) {
 			utils.ErrorResponseBadRequest(c, "Category tidak ditemukan", nil)
 			return
 		}
+		if err == services.ErrMenuNameExists {
+			utils.ErrorResponseBadRequest(c, "Nama menu sudah digunakan", nil)
+			return
+		}
 		if err == services.ErrCreateMenuFailed {
 			utils.ErrorResponseInternal(c, "Gagal membuat menu")
 			return

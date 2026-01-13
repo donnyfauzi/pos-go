@@ -14,6 +14,7 @@ import (
 // Sentinel errors
 var (
 	ErrCategoryNotFound = errors.New("Category tidak ditemukan")
+	ErrMenuNameExists   = errors.New("Nama menu sudah digunakan")
 	ErrCreateMenuFailed = errors.New("Gagal membuat menu")
 )
 
@@ -39,6 +40,16 @@ func (s *menuService) CreateMenu(input dto.CreateMenuDTO) (menu_model.Menu, erro
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return menu_model.Menu{}, ErrCategoryNotFound
 		}
+		return menu_model.Menu{}, ErrCreateMenuFailed
+	}
+
+	// Validasi: cek apakah nama menu sudah ada
+	var existingMenu menu_model.Menu
+	if err := config.DB.Where("name = ?", input.Name).First(&existingMenu).Error; err == nil {
+		// Menu dengan nama ini sudah ada
+		return menu_model.Menu{}, ErrMenuNameExists
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		// Error lain saat query
 		return menu_model.Menu{}, ErrCreateMenuFailed
 	}
 

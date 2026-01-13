@@ -59,3 +59,13 @@ func CreateCategory(c *gin.Context) {
 	utils.SuccessResponseCreated(c, "Category berhasil dibuat", category)
 }
 
+func GetAllCategories(c *gin.Context) {
+	categories, err := categoryService.GetAllCategories()
+	if err != nil {
+		utils.ErrorResponseInternal(c, "Gagal mengambil daftar category")
+		return
+	}
+	
+	utils.SuccessResponseOK(c, "Berhasil mengambil daftar category", categories)
+}
+
