@@ -13,7 +13,7 @@ type Menu struct {
 	Description string                     `json:"description"`
 	Price       float64                    `gorm:"not null" json:"price"`
 	Image       string                     `json:"image"` // URL atau path ke gambar
-	IsAvailable bool                       `gorm:"default:true" json:"is_available"`
+	IsAvailable bool                       `json:"is_available"`
 	CategoryID  uuid.UUID                  `gorm:"type:uuid;not null" json:"category_id"`
 	Category    category_model.Category    `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
 	gorm.Model
