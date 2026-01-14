@@ -18,6 +18,9 @@ var (
 	ErrCreateUserFailed   = errors.New("Gagal membuat user baru")
 	ErrInvalidCredentials = errors.New("Email atau password salah")
 	ErrInvalidOldPassword = errors.New("Password lama tidak cocok")
+	ErrGetUsersFailed     = errors.New("Gagal mengambil daftar user")
+	ErrUserNotFound       = errors.New("User tidak ditemukan")
+	ErrDeleteUserFailed   = errors.New("Gagal menghapus user")
 )
 
 type AuthService interface {
@@ -25,6 +28,8 @@ type AuthService interface {
 	Login(input dto.LoginDTO) (user_model.User, string, error)
 	ChangePassword(userID string, input dto.ChangePasswordDTO) error
 	GetCurrentUser(userID string) (user_model.User, error)
+	GetAllUsers() ([]user_model.User, error)
+	DeleteUser(userID string) error
 }
 
 type authService struct{}
@@ -136,6 +141,37 @@ func (s *authService) GetCurrentUser(userID string) (user_model.User, error) {
 	}
 
 	return user, nil
+}
+
+// GetAllUsers mengambil semua user dengan role "kasir" saja (untuk admin)
+func (s *authService) GetAllUsers() ([]user_model.User, error) {
+	var users []user_model.User
+	if err := config.DB.Where("role = ?", "kasir").Find(&users).Error; err != nil {
+		return nil, ErrGetUsersFailed
+	}
+	return users, nil
+}
+
+// DeleteUser menghapus user berdasarkan ID
+func (s *authService) DeleteUser(userID string) error {
+	var user user_model.User
+	if err := config.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrUserNotFound
+		}
+		return ErrDeleteUserFailed
+	}
+
+	// Jangan izinkan hapus admin
+	if user.Role == "admin" {
+		return errors.New("Tidak dapat menghapus user admin")
+	}
+
+	if err := config.DB.Delete(&user).Error; err != nil {
+		return ErrDeleteUserFailed
+	}
+
+	return nil
 }
 
 

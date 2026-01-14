@@ -217,3 +217,41 @@ func GetCurrentUser(c *gin.Context) {
 	utils.SuccessResponseOK(c, "User berhasil ditemukan", user)
 }
 
+func GetAllUsers(c *gin.Context) {
+	users, err := authService.GetAllUsers()
+	if err != nil {
+		if errors.Is(err, services.ErrGetUsersFailed) {
+			utils.ErrorResponseInternal(c, "Gagal mengambil daftar user")
+			return
+		}
+		utils.ErrorResponseInternal(c, "Terjadi kesalahan pada server")
+		return
+	}
+
+	utils.SuccessResponseOK(c, "Berhasil mengambil daftar user", users)
+}
+
+func DeleteUser(c *gin.Context) {
+	userID := c.Param("id")
+
+	err := authService.DeleteUser(userID)
+	if err != nil {
+		if errors.Is(err, services.ErrUserNotFound) {
+			utils.ErrorResponseNotFound(c, "User tidak ditemukan")
+			return
+		}
+		if err.Error() == "Tidak dapat menghapus user admin" {
+			utils.ErrorResponseBadRequest(c, err.Error(), nil)
+			return
+		}
+		if errors.Is(err, services.ErrDeleteUserFailed) {
+			utils.ErrorResponseInternal(c, "Gagal menghapus user")
+			return
+		}
+		utils.ErrorResponseInternal(c, "Terjadi kesalahan pada server")
+		return
+	}
+
+	utils.SuccessResponseOK(c, "User berhasil dihapus", nil)
+}
+

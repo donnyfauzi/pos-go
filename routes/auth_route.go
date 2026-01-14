@@ -15,4 +15,12 @@ func AuthRoutes(r *gin.Engine) {
 		auth.POST("/register", middleware.AuthMiddleware(), middleware.RequireRole("admin"), controllers.Register)
 		auth.PUT("/change-password", middleware.AuthMiddleware(), controllers.ChangePassword)
 	}
+
+	user := r.Group("/user")
+	{
+		user.GET("", middleware.AuthMiddleware(), middleware.RequireRole("admin"), controllers.GetAllUsers)
+		user.DELETE("/:id", middleware.AuthMiddleware(), middleware.RequireRole("admin"), controllers.DeleteUser)
+	}
 }
+
+
