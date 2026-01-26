@@ -173,5 +173,3 @@ func (s *authService) DeleteUser(userID string) error {
 
 	return nil
 }
-
-

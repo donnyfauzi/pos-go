@@ -16,4 +16,3 @@ func (category *Category) BeforeCreate(tx *gorm.DB) (err error) {
 	category.ID = uuid.New()
 	return
 }
-

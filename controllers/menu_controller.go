@@ -16,7 +16,7 @@ var menuService services.MenuService = services.NewMenuService()
 func CreateMenu(c *gin.Context) {
 	// Bind form data (multipart/form-data)
 	var input dto.CreateMenuDTO
-	
+
 	// Bind form fields
 	if err := c.ShouldBind(&input); err != nil {
 		errorsMap := make(map[string]string)
@@ -104,7 +104,7 @@ func GetAllMenus(c *gin.Context) {
 		utils.ErrorResponseInternal(c, "Terjadi kesalahan pada server")
 		return
 	}
-	
+
 	utils.SuccessResponseOK(c, "Berhasil mengambil daftar menu", menus)
 }
 
@@ -118,7 +118,7 @@ func GetPublicMenus(c *gin.Context) {
 		utils.ErrorResponseInternal(c, "Terjadi kesalahan pada server")
 		return
 	}
-	
+
 	utils.SuccessResponseOK(c, "Berhasil mengambil daftar menu", menus)
 }
 

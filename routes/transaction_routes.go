@@ -13,6 +13,9 @@ func TransactionRoutes(r *gin.Engine) {
 		// Public - create transaction (checkout untuk customer)
 		transaction.POST("", controllers.CreateTransaction)
 
+		// Public - webhook dari Midtrans (PENTING!)
+		transaction.POST("/notification", controllers.HandleMidtransNotification)
+
 		// Admin & Kasir - lihat semua transaksi
 		transaction.GET("", middleware.AuthMiddleware(), controllers.GetAllTransactions)
 

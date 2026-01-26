@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	UploadDir          = "uploads/images"
-	MaxFileSize        = 5 << 20 // 5 MB
-	AllowedExtensions  = ".jpg,.jpeg,.png,.webp"
+	UploadDir         = "uploads/images"
+	MaxFileSize       = 5 << 20 // 5 MB
+	AllowedExtensions = ".jpg,.jpeg,.png,.webp"
 )
 
 // ValidateImageFile - Validasi file gambar
@@ -27,7 +27,7 @@ func ValidateImageFile(fileHeader *multipart.FileHeader) error {
 	// Cek extension
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
 	allowedExts := strings.Split(AllowedExtensions, ",")
-	
+
 	isValid := false
 	for _, allowedExt := range allowedExts {
 		if ext == strings.TrimSpace(allowedExt) {
@@ -35,7 +35,7 @@ func ValidateImageFile(fileHeader *multipart.FileHeader) error {
 			break
 		}
 	}
-	
+
 	if !isValid {
 		return fmt.Errorf("format file tidak didukung, gunakan: jpg, jpeg, png, webp")
 	}

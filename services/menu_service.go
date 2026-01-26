@@ -19,15 +19,15 @@ var (
 	ErrCreateMenuFailed = errors.New("Gagal membuat menu")
 	ErrUpdateMenuFailed = errors.New("Gagal mengupdate menu")
 	ErrDeleteMenuFailed = errors.New("Gagal menghapus menu")
-	ErrGetMenusFailed = errors.New("Gagal mengambil daftar menu")
+	ErrGetMenusFailed   = errors.New("Gagal mengambil daftar menu")
 )
 
 type MenuService interface {
 	CreateMenu(input dto.CreateMenuDTO) (menu_model.Menu, error)
 	UpdateMenu(menuID string, input dto.CreateMenuDTO) (menu_model.Menu, error)
 	DeleteMenu(menuID string) error
-	GetAllMenus() ([]menu_model.Menu, error)      //admin
-	GetPublicMenus() ([]menu_model.Menu, error) 
+	GetAllMenus() ([]menu_model.Menu, error) //admin
+	GetPublicMenus() ([]menu_model.Menu, error)
 }
 
 type menuService struct{}
@@ -87,25 +87,25 @@ func (s *menuService) CreateMenu(input dto.CreateMenuDTO) (menu_model.Menu, erro
 // Get semua menu untuk admin dashboard
 func (s *menuService) GetAllMenus() ([]menu_model.Menu, error) {
 	var menus []menu_model.Menu
-	
+
 	// Preload Category untuk mendapatkan informasi kategori
 	if err := config.DB.Preload("Category").Find(&menus).Error; err != nil {
 		return nil, ErrGetMenusFailed
 	}
-	
+
 	return menus, nil
 }
 
 // Get menu yang tersedia untuk customer (is_available = true)
 func (s *menuService) GetPublicMenus() ([]menu_model.Menu, error) {
 	var menus []menu_model.Menu
-	
+
 	// Filter hanya menu yang is_available = true
 	// Preload Category untuk mendapatkan informasi kategori
 	if err := config.DB.Preload("Category").Where("is_available = ?", true).Find(&menus).Error; err != nil {
 		return nil, ErrGetMenusFailed
 	}
-	
+
 	return menus, nil
 }
 

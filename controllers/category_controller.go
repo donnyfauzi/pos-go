@@ -65,7 +65,6 @@ func GetAllCategories(c *gin.Context) {
 		utils.ErrorResponseInternal(c, "Gagal mengambil daftar category")
 		return
 	}
-	
+
 	utils.SuccessResponseOK(c, "Berhasil mengambil daftar category", categories)
 }
-

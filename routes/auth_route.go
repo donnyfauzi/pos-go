@@ -22,5 +22,3 @@ func AuthRoutes(r *gin.Engine) {
 		user.DELETE("/:id", middleware.AuthMiddleware(), middleware.RequireRole("admin"), controllers.DeleteUser)
 	}
 }
-
-

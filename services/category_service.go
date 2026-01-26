@@ -11,7 +11,7 @@ import (
 
 // Sentinel errors
 var (
-	ErrCategoryNameExists  = errors.New("Nama category sudah digunakan")
+	ErrCategoryNameExists   = errors.New("Nama category sudah digunakan")
 	ErrCreateCategoryFailed = errors.New("Gagal membuat category")
 )
 
@@ -52,10 +52,10 @@ func (s *categoryService) CreateCategory(input dto.CreateCategoryDTO) (category_
 
 func (s *categoryService) GetAllCategories() ([]category_model.Category, error) {
 	var categories []category_model.Category
-	
+
 	if err := config.DB.Find(&categories).Error; err != nil {
-		return nil, ErrCreateCategoryFailed 
+		return nil, ErrCreateCategoryFailed
 	}
-	
+
 	return categories, nil
 }

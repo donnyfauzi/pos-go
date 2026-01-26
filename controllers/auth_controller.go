@@ -121,13 +121,13 @@ func Login(c *gin.Context) {
 
 	// Set token di HTTP-only cookie (Hybrid approach)
 	c.SetCookie(
-		"token",           // name
-		token,             // value
-		3600,              // max age (1 jam dalam detik)
-		"/",               // path
-		"",                // domain (kosong = current domain)
-		false,             // secure (set true jika pakai HTTPS)
-		true,              // httpOnly (true = tidak bisa diakses JavaScript)
+		"token", // name
+		token,   // value
+		3600,    // max age (1 jam dalam detik)
+		"/",     // path
+		"",      // domain (kosong = current domain)
+		false,   // secure (set true jika pakai HTTPS)
+		true,    // httpOnly (true = tidak bisa diakses JavaScript)
 	)
 
 	// Sukses login - return user (token sudah di cookie)
@@ -254,4 +254,3 @@ func DeleteUser(c *gin.Context) {
 
 	utils.SuccessResponseOK(c, "User berhasil dihapus", nil)
 }
-
