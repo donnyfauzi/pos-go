@@ -7,6 +7,7 @@ import (
 
 	category_model "pos-go/models/category_model"
 	menu_model "pos-go/models/menu_model"
+	transaction_model "pos-go/models/transaction_model"
 	user_model "pos-go/models/user_model"
 
 	"github.com/joho/godotenv"
@@ -47,6 +48,8 @@ func ConnectDatabase() {
 		&user_model.User{},
 		&category_model.Category{},
 		&menu_model.Menu{},
+		&transaction_model.Transaction{},
+		&transaction_model.TransactionItem{},
 	)
 	if err != nil {
 		log.Fatal("Migrasi gagal:", err)
