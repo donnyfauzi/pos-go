@@ -1,4 +1,4 @@
-package models
+package menu_model
 
 import (
 	category_model "pos-go/models/category_model"

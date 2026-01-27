@@ -126,7 +126,7 @@ func UpdateMenu(c *gin.Context) {
 	menuID := c.Param("id")
 
 	// Bind form data (multipart/form-data)
-	var input dto.CreateMenuDTO
+	var input dto.UpdateMenuDTO
 
 	// Bind form fields
 	if err := c.ShouldBind(&input); err != nil {

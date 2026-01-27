@@ -48,6 +48,7 @@ func main() {
 	routes.CategoryRoutes(r)
 	routes.MenuRoutes(r)
 	routes.TransactionRoutes(r)
+	routes.PromoRoutes(r)
 
 	r.GET("/ping", func(c *gin.Context) {
 		utils.SuccessResponseOK(c, "API sukses berjalan", nil)

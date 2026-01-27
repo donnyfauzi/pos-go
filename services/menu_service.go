@@ -24,7 +24,7 @@ var (
 
 type MenuService interface {
 	CreateMenu(input dto.CreateMenuDTO) (menu_model.Menu, error)
-	UpdateMenu(menuID string, input dto.CreateMenuDTO) (menu_model.Menu, error)
+	UpdateMenu(menuID string, input dto.UpdateMenuDTO) (menu_model.Menu, error)
 	DeleteMenu(menuID string) error
 	GetAllMenus() ([]menu_model.Menu, error) //admin
 	GetPublicMenus() ([]menu_model.Menu, error)
@@ -109,8 +109,8 @@ func (s *menuService) GetPublicMenus() ([]menu_model.Menu, error) {
 	return menus, nil
 }
 
-// UpdateMenu mengupdate menu berdasarkan ID
-func (s *menuService) UpdateMenu(menuID string, input dto.CreateMenuDTO) (menu_model.Menu, error) {
+// UpdateMenu mengupdate menu berdasarkan ID (partial update)
+func (s *menuService) UpdateMenu(menuID string, input dto.UpdateMenuDTO) (menu_model.Menu, error) {
 	// Parse menu ID
 	id, err := uuid.Parse(menuID)
 	if err != nil {
@@ -126,36 +126,48 @@ func (s *menuService) UpdateMenu(menuID string, input dto.CreateMenuDTO) (menu_m
 		return menu_model.Menu{}, ErrUpdateMenuFailed
 	}
 
-	// Validasi: cek apakah category exists
-	categoryID, err := uuid.Parse(input.CategoryID)
-	if err != nil {
-		return menu_model.Menu{}, ErrCategoryNotFound
+	// Partial update: hanya update field yang dikirim
+
+	// Update Name jika ada
+	if input.Name != "" {
+		// Validasi: cek apakah nama menu sudah digunakan oleh menu lain
+		var existingMenu menu_model.Menu
+		if err := config.DB.Where("name = ? AND id != ?", input.Name, id).First(&existingMenu).Error; err == nil {
+			return menu_model.Menu{}, ErrMenuNameExists
+		} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return menu_model.Menu{}, ErrUpdateMenuFailed
+		}
+		menu.Name = input.Name
 	}
 
-	var category category_model.Category
-	if err := config.DB.Where("id = ?", categoryID).First(&category).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	// Update Description (selalu update, boleh kosong)
+	menu.Description = input.Description
+
+	// Update Price jika ada
+	if input.Price > 0 {
+		menu.Price = input.Price
+	}
+
+	// Update CategoryID jika ada
+	if input.CategoryID != "" {
+		categoryID, err := uuid.Parse(input.CategoryID)
+		if err != nil {
 			return menu_model.Menu{}, ErrCategoryNotFound
 		}
-		return menu_model.Menu{}, ErrUpdateMenuFailed
+
+		// Validasi: cek apakah category exists
+		var category category_model.Category
+		if err := config.DB.Where("id = ?", categoryID).First(&category).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return menu_model.Menu{}, ErrCategoryNotFound
+			}
+			return menu_model.Menu{}, ErrUpdateMenuFailed
+		}
+		menu.CategoryID = categoryID
 	}
 
-	// Validasi: cek apakah nama menu sudah digunakan oleh menu lain (bukan menu yang sedang di-edit)
-	var existingMenu menu_model.Menu
-	if err := config.DB.Where("name = ? AND id != ?", input.Name, id).First(&existingMenu).Error; err == nil {
-		// Menu dengan nama ini sudah ada (bukan menu yang sedang di-edit)
-		return menu_model.Menu{}, ErrMenuNameExists
-	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		// Error lain saat query
-		return menu_model.Menu{}, ErrUpdateMenuFailed
-	}
-
-	// Update fields
-	menu.Name = input.Name
-	menu.Description = input.Description
-	menu.Price = input.Price
+	// Update IsAvailable (selalu update dari form)
 	menu.IsAvailable = input.IsAvailable
-	menu.CategoryID = categoryID
 
 	// Update image hanya jika ada (input.Image tidak kosong)
 	if input.Image != "" {
