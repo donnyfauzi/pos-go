@@ -33,6 +33,7 @@ type PromoService interface {
 	DeletePromo(promoID string) error
 	GetAllPromos() ([]promo_model.Promo, error)
 	GetPromoByID(promoID string) (promo_model.Promo, error)
+	GetActivePromos() ([]promo_model.Promo, error)
 	ValidatePromo(code string, subtotal float64) (promo_model.Promo, float64, error)
 }
 
@@ -170,6 +171,24 @@ func (s *promoService) UpdatePromo(promoID string, input dto.UpdatePromoDTO) (pr
 	}
 
 	return promo, nil
+}
+
+// GetActivePromos mengambil semua promo yang aktif (public endpoint)
+func (s *promoService) GetActivePromos() ([]promo_model.Promo, error) {
+	var promos []promo_model.Promo
+	now := time.Now()
+
+	// Ambil promo yang aktif, dalam rentang tanggal, dan belum habis kuota
+	// Filter: is_active = true, start_date <= now (sudah mulai), end_date >= now (belum berakhir), dan usage belum habis
+	// GORM secara default exclude soft deleted records (deleted_at IS NULL)
+	if err := config.DB.Where("is_active = ? AND start_date <= ? AND end_date >= ?", true, now, now).
+		Where("(usage_limit = 0 OR usage_count < usage_limit)").
+		Order("created_at DESC").
+		Find(&promos).Error; err != nil {
+		return nil, ErrGetPromosFailed
+	}
+
+	return promos, nil
 }
 
 // DeletePromo menghapus promo (soft delete)

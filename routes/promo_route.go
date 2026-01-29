@@ -10,7 +10,8 @@ import (
 func PromoRoutes(r *gin.Engine) {
 	promo := r.Group("/promo")
 	{
-		// Public - validate promo code saat checkout
+		// Public - get active promos dan validate promo code
+		promo.GET("/active", controllers.GetActivePromos)
 		promo.POST("/validate", controllers.ValidatePromo)
 
 		// Admin only - CRUD promo

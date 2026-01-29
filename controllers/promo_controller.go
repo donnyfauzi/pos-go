@@ -143,6 +143,17 @@ func DeletePromo(c *gin.Context) {
 	utils.SuccessResponseOK(c, "Promo berhasil dihapus", nil)
 }
 
+// GetActivePromos - Public endpoint untuk customer melihat promo aktif
+func GetActivePromos(c *gin.Context) {
+	promos, err := promoService.GetActivePromos()
+	if err != nil {
+		utils.ErrorResponseInternal(c, "Gagal mengambil daftar promo aktif")
+		return
+	}
+
+	utils.SuccessResponseOK(c, "Berhasil mengambil daftar promo aktif", promos)
+}
+
 // ValidatePromo - Public endpoint untuk customer validate promo saat checkout
 func ValidatePromo(c *gin.Context) {
 	var input dto.ValidatePromoDTO
