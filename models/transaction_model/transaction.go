@@ -12,8 +12,10 @@ type Transaction struct {
 	ID            uuid.UUID         `gorm:"type:uuid;primaryKey" json:"id"`
 	CustomerName  string            `gorm:"type:varchar(255);not null" json:"customer_name"`
 	CustomerPhone string            `gorm:"type:varchar(20);not null" json:"customer_phone"`
-	CustomerEmail string            `gorm:"type:varchar(255)" json:"customer_email"`
+	OrderType     string            `gorm:"type:varchar(20);not null;default:'take_away'" json:"order_type"` // dine_in | take_away
 	TableNumber   *int              `gorm:"type:int" json:"table_number"`
+	PromoCode     string            `gorm:"type:varchar(50)" json:"promo_code"`
+	Discount      float64           `gorm:"type:decimal(15,2);default:0" json:"discount"`
 	Subtotal      float64           `gorm:"type:decimal(15,2);not null;default:0" json:"subtotal"`             // Total sebelum pajak
 	Tax           float64           `gorm:"type:decimal(15,2);not null;default:0" json:"tax"`                  // Pajak (PPN 10%)
 	TotalAmount   float64           `gorm:"type:decimal(15,2);not null;default:0" json:"total_amount"`         // Total setelah pajak

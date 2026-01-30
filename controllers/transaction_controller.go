@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"strings"
 	"pos-go/dto"
 	"pos-go/services"
 	"pos-go/utils"
@@ -49,7 +50,8 @@ func CreateTransaction(c *gin.Context) {
 			utils.ErrorResponseNotFound(c, "Menu tidak ditemukan atau tidak tersedia")
 			return
 		}
-		utils.ErrorResponseInternal(c, "Gagal membuat transaksi")
+		// Error dari Midtrans / token pembayaran: transaksi tidak disimpan ke DB
+		utils.ErrorResponseInternal(c, err.Error())
 		return
 	}
 
@@ -58,8 +60,10 @@ func CreateTransaction(c *gin.Context) {
 		ID:            transaction.ID,
 		CustomerName:  transaction.CustomerName,
 		CustomerPhone: transaction.CustomerPhone,
-		CustomerEmail: transaction.CustomerEmail,
+		OrderType:     transaction.OrderType,
 		TableNumber:   transaction.TableNumber,
+		PromoCode:     transaction.PromoCode,
+		Discount:      transaction.Discount,
 		Subtotal:      transaction.Subtotal,
 		Tax:           transaction.Tax,
 		TotalAmount:   transaction.TotalAmount,
@@ -120,7 +124,8 @@ func HandleMidtransNotification(c *gin.Context) {
 	switch notification.TransactionStatus {
 	case "capture", "settlement":
 		paymentStatus = "paid"
-		orderStatus = "completed"
+		// Tetap pending (antrian), sampai ada flow dapur/selesai
+		orderStatus = "pending"
 	case "pending":
 		paymentStatus = "pending"
 		orderStatus = "pending"
@@ -144,6 +149,24 @@ func HandleMidtransNotification(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"status": "success"})
+}
+
+// ConfirmCashPaid - kasir konfirmasi pembayaran tunai
+func ConfirmCashPaid(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		utils.ErrorResponseBadRequest(c, "ID transaksi tidak valid", nil)
+		return
+	}
+
+	tx, err := transactionService.ConfirmCashPaid(id)
+	if err != nil {
+		utils.ErrorResponseBadRequest(c, err.Error(), nil)
+		return
+	}
+
+	utils.SuccessResponseOK(c, "Pembayaran tunai berhasil dikonfirmasi", tx)
 }
 
 func GetAllTransactions(c *gin.Context) {
@@ -175,4 +198,43 @@ func GetTransactionByID(c *gin.Context) {
 	}
 
 	utils.SuccessResponseOK(c, "Berhasil mengambil data transaksi", transaction)
+}
+
+// UpdateOrderStatus - kasir / koki update status pesanan dengan aturan per role
+func UpdateOrderStatus(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		utils.ErrorResponseBadRequest(c, "ID transaksi tidak valid", nil)
+		return
+	}
+
+	var req dto.UpdateOrderStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponseBadRequest(c, "Format data tidak valid", nil)
+		return
+	}
+
+	roleVal, exists := c.Get("role")
+	if !exists {
+		utils.ErrorResponseUnauthorized(c, "Role tidak ditemukan")
+		return
+	}
+	role, _ := roleVal.(string)
+
+	tx, err := transactionService.UpdateOrderStatusForRole(id, role, req.OrderStatus)
+	if err != nil {
+		if errors.Is(err, services.ErrTransactionNotFound) {
+			utils.ErrorResponseNotFound(c, "Transaksi tidak ditemukan")
+			return
+		}
+		if errors.Is(err, services.ErrInvalidStatus) || strings.Contains(err.Error(), "belum berstatus paid") {
+			utils.ErrorResponseBadRequest(c, err.Error(), nil)
+			return
+		}
+		utils.ErrorResponseInternal(c, "Gagal mengubah status pesanan")
+		return
+	}
+
+	utils.SuccessResponseOK(c, "Status pesanan berhasil diubah", tx)
 }

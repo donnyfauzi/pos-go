@@ -143,10 +143,12 @@ func (s *authService) GetCurrentUser(userID string) (user_model.User, error) {
 	return user, nil
 }
 
-// GetAllUsers mengambil semua user dengan role "kasir" saja (untuk admin)
+// GetAllUsers mengambil semua user non-admin (kasir & koki) untuk admin
 func (s *authService) GetAllUsers() ([]user_model.User, error) {
 	var users []user_model.User
-	if err := config.DB.Where("role = ?", "kasir").Find(&users).Error; err != nil {
+	if err := config.DB.
+		Where("role IN ?", []string{"kasir", "koki"}).
+		Find(&users).Error; err != nil {
 		return nil, ErrGetUsersFailed
 	}
 	return users, nil

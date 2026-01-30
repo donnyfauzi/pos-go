@@ -21,5 +21,11 @@ func TransactionRoutes(r *gin.Engine) {
 
 		// Admin & Kasir - lihat detail transaksi
 		transaction.GET("/:id", middleware.AuthMiddleware(), controllers.GetTransactionByID)
+
+		// Kasir only - konfirmasi pembayaran tunai
+		transaction.PATCH("/:id/cash-paid", middleware.AuthMiddleware(), middleware.RequireRole("kasir"), controllers.ConfirmCashPaid)
+
+		// Kasir & Koki - update order_status dengan aturan per role
+		transaction.PATCH("/:id/order-status", middleware.AuthMiddleware(), middleware.RequireRole("kasir", "koki"), controllers.UpdateOrderStatus)
 	}
 }
