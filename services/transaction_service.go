@@ -7,6 +7,7 @@ import (
 	menu_model "pos-go/models/menu_model"
 	promo_model "pos-go/models/promo_model"
 	transaction_model "pos-go/models/transaction_model"
+	user_model "pos-go/models/user_model"
 	"strings"
 	"time"
 
@@ -411,4 +412,44 @@ func (s TransactionService) GetTransactionByID(id uuid.UUID) (*transaction_model
 		return nil, ErrDatabaseError
 	}
 	return &transaction, nil
+}
+
+// GetTransactionReceipt returns data for receipt print (with kasir name).
+func (s TransactionService) GetTransactionReceipt(id uuid.UUID) (*dto.ReceiptResponse, error) {
+	tx, err := s.GetTransactionByID(id)
+	if err != nil {
+		return nil, err
+	}
+	closedByName := "-"
+	if tx.ClosedByUserID != nil {
+		var u user_model.User
+		if err := config.DB.Select("name").First(&u, "id = ?", *tx.ClosedByUserID).Error; err == nil {
+			closedByName = u.Name
+		}
+	}
+	items := make([]dto.ReceiptItemResponse, 0, len(tx.Items))
+	for _, it := range tx.Items {
+		items = append(items, dto.ReceiptItemResponse{
+			MenuName:  it.MenuName,
+			Quantity:  it.Quantity,
+			MenuPrice: it.MenuPrice,
+			Subtotal:  it.Subtotal,
+		})
+	}
+	return &dto.ReceiptResponse{
+		ID:               tx.ID,
+		CreatedAt:        tx.CreatedAt.Format(time.RFC3339),
+		CustomerName:     tx.CustomerName,
+		CustomerPhone:    tx.CustomerPhone,
+		OrderType:        tx.OrderType,
+		TableNumber:      tx.TableNumber,
+		Items:            items,
+		Subtotal:         tx.Subtotal,
+		Discount:         tx.Discount,
+		Tax:              tx.Tax,
+		TotalAmount:      tx.TotalAmount,
+		PaymentMethod:    tx.PaymentMethod,
+		PaymentStatus:    tx.PaymentStatus,
+		ClosedByUserName: closedByName,
+	}, nil
 }

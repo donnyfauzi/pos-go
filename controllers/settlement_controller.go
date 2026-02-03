@@ -81,3 +81,24 @@ func CreateSettlement(c *gin.Context) {
 
 	utils.SuccessResponseCreated(c, "Settlement berhasil disimpan", settlement)
 }
+
+// GetSettlementStatusByDate GET /settlement/status-by-date?date=YYYY-MM-DD — admin only. Daftar kasir + expected cash + status settlement.
+func GetSettlementStatusByDate(c *gin.Context) {
+	dateStr := c.Query("date")
+	if dateStr == "" {
+		utils.ErrorResponseBadRequest(c, "Parameter date (YYYY-MM-DD) wajib diisi", nil)
+		return
+	}
+
+	resp, err := settlementService.GetSettlementStatusByDate(dateStr)
+	if err != nil {
+		if errors.Is(err, services.ErrDatabaseError) {
+			utils.ErrorResponseInternal(c, "Gagal mengambil status settlement")
+			return
+		}
+		utils.ErrorResponseBadRequest(c, "Tanggal tidak valid. Gunakan format YYYY-MM-DD", nil)
+		return
+	}
+
+	utils.SuccessResponseOK(c, "Status settlement per kasir berhasil diambil", resp)
+}

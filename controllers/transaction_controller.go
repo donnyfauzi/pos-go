@@ -287,3 +287,23 @@ func CancelOrder(c *gin.Context) {
 
 	utils.SuccessResponseOK(c, "Pesanan berhasil dibatalkan", tx)
 }
+
+// GetTransactionReceipt returns receipt data for print (kasir/admin).
+func GetTransactionReceipt(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		utils.ErrorResponseBadRequest(c, "ID transaksi tidak valid", nil)
+		return
+	}
+	receipt, err := transactionService.GetTransactionReceipt(id)
+	if err != nil {
+		if errors.Is(err, services.ErrTransactionNotFound) {
+			utils.ErrorResponseNotFound(c, "Transaksi tidak ditemukan")
+			return
+		}
+		utils.ErrorResponseInternal(c, "Gagal mengambil data struk")
+		return
+	}
+	utils.SuccessResponseOK(c, "Data struk berhasil diambil", receipt)
+}

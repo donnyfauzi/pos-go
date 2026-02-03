@@ -109,3 +109,29 @@ type MidtransNotification struct {
 type UpdateOrderStatusRequest struct {
 	OrderStatus string `json:"order_status" binding:"required,oneof=pending cooking ready completed cancelled"`
 }
+
+// ReceiptItemResponse item untuk struk
+type ReceiptItemResponse struct {
+	MenuName  string  `json:"menu_name"`
+	Quantity  int     `json:"quantity"`
+	MenuPrice float64 `json:"menu_price"`
+	Subtotal  float64 `json:"subtotal"`
+}
+
+// ReceiptResponse data struk untuk print (GET /transaction/:id/receipt)
+type ReceiptResponse struct {
+	ID                 uuid.UUID              `json:"id"`
+	CreatedAt          string                 `json:"created_at"`
+	CustomerName       string                 `json:"customer_name"`
+	CustomerPhone      string                 `json:"customer_phone"`
+	OrderType          string                 `json:"order_type"`
+	TableNumber        *int                   `json:"table_number,omitempty"`
+	Items              []ReceiptItemResponse `json:"items"`
+	Subtotal           float64                `json:"subtotal"`
+	Discount           float64                `json:"discount"`
+	Tax                float64                `json:"tax"`
+	TotalAmount        float64                `json:"total_amount"`
+	PaymentMethod      string                 `json:"payment_method"`
+	PaymentStatus      string                 `json:"payment_status"`
+	ClosedByUserName   string                 `json:"closed_by_user_name"`
+}

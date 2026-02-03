@@ -6,6 +6,7 @@ import (
 	"pos-go/dto"
 	settlement_model "pos-go/models/settlement_model"
 	transaction_model "pos-go/models/transaction_model"
+	user_model "pos-go/models/user_model"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,13 +21,13 @@ func NewSettlementService() SettlementService {
 	return SettlementService{}
 }
 
-// expectedCashFromTransactions menghitung total tunai yang seharusnya (transaksi cash, paid, completed, di tanggal tersebut)
-func expectedCashFromTransactions(startOfDay, endOfDay time.Time) (float64, error) {
+// expectedCashFromTransactionsByUser menghitung total tunai yang seharusnya untuk kasir tersebut (transaksi cash, paid, completed, closed_by_user_id = userID).
+func expectedCashFromTransactionsByUser(startOfDay, endOfDay time.Time, userID uuid.UUID) (float64, error) {
 	var total float64
 	err := config.DB.Model(&transaction_model.Transaction{}).
 		Select("COALESCE(SUM(total_amount), 0)").
-		Where("created_at >= ? AND created_at < ? AND order_status = ? AND payment_status = ? AND payment_method = ?",
-			startOfDay, endOfDay, "completed", "paid", "cash").
+		Where("created_at >= ? AND created_at < ? AND order_status = ? AND payment_status = ? AND payment_method = ? AND closed_by_user_id = ?",
+			startOfDay, endOfDay, "completed", "paid", "cash", userID).
 		Scan(&total).Error
 	if err != nil {
 		return 0, ErrDatabaseError
@@ -43,7 +44,7 @@ func (s SettlementService) CreateSettlement(userID uuid.UUID, dateStr string, ac
 	startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 	endOfDay := startOfDay.AddDate(0, 0, 1)
 
-	expectedCash, err := expectedCashFromTransactions(startOfDay, endOfDay)
+	expectedCash, err := expectedCashFromTransactionsByUser(startOfDay, endOfDay, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +91,9 @@ func (s SettlementService) GetSettlementByDateAndUser(dateStr string, userID uui
 	return toSettlementResponse(&settlement), nil
 }
 
-// GetSettlementWithExpected mengembalikan expected_cash untuk tanggal + settlement jika sudah ada (untuk GET /settlement?date=)
+// GetSettlementWithExpected mengembalikan expected_cash untuk tanggal + kasir tersebut + settlement jika sudah ada (untuk GET /settlement?date=)
 func (s SettlementService) GetSettlementWithExpected(dateStr string, userID uuid.UUID) (*dto.GetSettlementResponse, error) {
-	expectedCash, err := s.GetExpectedCashForDate(dateStr)
+	expectedCash, err := s.GetExpectedCashForDateAndUser(dateStr, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -106,15 +107,59 @@ func (s SettlementService) GetSettlementWithExpected(dateStr string, userID uuid
 	}, nil
 }
 
-// GetExpectedCashForDate mengembalikan expected cash untuk tanggal (tanpa simpan settlement). Untuk tampilan form.
-func (s SettlementService) GetExpectedCashForDate(dateStr string) (float64, error) {
+// GetExpectedCashForDateAndUser mengembalikan expected cash untuk tanggal dan kasir (tunai dari transaksi yang ditutup kasir tersebut).
+func (s SettlementService) GetExpectedCashForDateAndUser(dateStr string, userID uuid.UUID) (float64, error) {
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		return 0, err
 	}
 	startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 	endOfDay := startOfDay.AddDate(0, 0, 1)
-	return expectedCashFromTransactions(startOfDay, endOfDay)
+	return expectedCashFromTransactionsByUser(startOfDay, endOfDay, userID)
+}
+
+// GetSettlementStatusByDate untuk admin: daftar kasir yang punya transaksi di tanggal tersebut + status settlement (sudah/belum).
+func (s SettlementService) GetSettlementStatusByDate(dateStr string) (*dto.GetSettlementStatusByDateResponse, error) {
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return nil, err
+	}
+	startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	endOfDay := startOfDay.AddDate(0, 0, 1)
+
+	var userIDs []uuid.UUID
+	err = config.DB.Model(&transaction_model.Transaction{}).
+		Distinct("closed_by_user_id").
+		Where("created_at >= ? AND created_at < ? AND order_status = ? AND payment_status = ? AND closed_by_user_id IS NOT NULL",
+			startOfDay, endOfDay, "completed", "paid").
+		Pluck("closed_by_user_id", &userIDs).Error
+	if err != nil {
+		return nil, ErrDatabaseError
+	}
+
+	items := make([]dto.SettlementStatusItem, 0, len(userIDs))
+	for _, uid := range userIDs {
+		expected, _ := expectedCashFromTransactionsByUser(startOfDay, endOfDay, uid)
+		settlement, _ := s.GetSettlementByDateAndUser(dateStr, uid)
+		var name string
+		var u user_model.User
+		if err := config.DB.Select("name").First(&u, "id = ?", uid).Error; err == nil {
+			name = u.Name
+		} else {
+			name = "-"
+		}
+		items = append(items, dto.SettlementStatusItem{
+			UserID:       uid.String(),
+			UserName:     name,
+			ExpectedCash: expected,
+			Settlement:   settlement,
+		})
+	}
+
+	return &dto.GetSettlementStatusByDateResponse{
+		Date:  dateStr,
+		Items: items,
+	}, nil
 }
 
 func toSettlementResponse(s *settlement_model.Settlement) *dto.SettlementResponse {

@@ -17,8 +17,9 @@ func NewReportService() ReportService {
 }
 
 // GetReportByDate mengembalikan laporan harian: agregasi + list transaksi (completed & paid) untuk tanggal tertentu.
+// Jika cashierID != nil, hanya transaksi yang closed_by_user_id = cashierID (laporan per kasir).
 // dateStr format: YYYY-MM-DD.
-func (s ReportService) GetReportByDate(dateStr string) (*dto.ReportResponse, error) {
+func (s ReportService) GetReportByDate(dateStr string, cashierID *uuid.UUID) (*dto.ReportResponse, error) {
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		return nil, err
@@ -27,10 +28,14 @@ func (s ReportService) GetReportByDate(dateStr string) (*dto.ReportResponse, err
 	endOfDay := startOfDay.AddDate(0, 0, 1)
 
 	var transactions []transaction_model.Transaction
-	if err := config.DB.Where(
+	q := config.DB.Where(
 		"created_at >= ? AND created_at < ? AND order_status = ? AND payment_status = ?",
 		startOfDay, endOfDay, "completed", "paid",
-	).Order("created_at ASC").Find(&transactions).Error; err != nil {
+	)
+	if cashierID != nil {
+		q = q.Where("closed_by_user_id = ?", *cashierID)
+	}
+	if err := q.Order("created_at ASC").Find(&transactions).Error; err != nil {
 		return nil, ErrDatabaseError
 	}
 
@@ -210,3 +215,4 @@ func (s ReportService) GetReportCharts(days, months int) (*dto.ChartResponse, er
 		Monthly: monthlyList,
 	}, nil
 }
+

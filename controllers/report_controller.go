@@ -7,12 +7,13 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 var reportService services.ReportService = services.NewReportService()
 
 // GetReportByDate mengembalikan laporan harian (agregasi + list transaksi) untuk tanggal yang diberikan.
-// Query: date (YYYY-MM-DD). Akses: admin & kasir.
+// Query: date (YYYY-MM-DD). Akses: admin (semua transaksi) & kasir (hanya transaksi yang ditutup oleh kasir itu).
 func GetReportByDate(c *gin.Context) {
 	dateStr := c.Query("date")
 	if dateStr == "" {
@@ -20,13 +21,32 @@ func GetReportByDate(c *gin.Context) {
 		return
 	}
 
-	report, err := reportService.GetReportByDate(dateStr)
+	var cashierID *uuid.UUID
+	roleVal, hasRole := c.Get("role")
+	if hasRole {
+		role, _ := roleVal.(string)
+		if role == "kasir" || role == "Kasir" {
+			uidVal, exists := c.Get("user_id")
+			if exists && uidVal != nil {
+				switch v := uidVal.(type) {
+				case string:
+					parsed, err := uuid.Parse(v)
+					if err == nil {
+						cashierID = &parsed
+					}
+				case uuid.UUID:
+					cashierID = &v
+				}
+			}
+		}
+	}
+
+	report, err := reportService.GetReportByDate(dateStr, cashierID)
 	if err != nil {
 		if errors.Is(err, services.ErrDatabaseError) {
 			utils.ErrorResponseInternal(c, "Gagal mengambil laporan")
 			return
 		}
-		// Invalid date format
 		utils.ErrorResponseBadRequest(c, "Tanggal tidak valid. Gunakan format YYYY-MM-DD", nil)
 		return
 	}
@@ -61,3 +81,4 @@ func GetReportCharts(c *gin.Context) {
 
 	utils.SuccessResponseOK(c, "Data grafik berhasil diambil", charts)
 }
+

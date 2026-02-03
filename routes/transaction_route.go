@@ -19,6 +19,9 @@ func TransactionRoutes(r *gin.Engine) {
 		// Admin & Kasir - lihat semua transaksi
 		transaction.GET("", middleware.AuthMiddleware(), controllers.GetAllTransactions)
 
+		// Kasir & Admin - data struk untuk print (harus sebelum /:id agar path .../receipt tidak tertangkap sebagai :id)
+		transaction.GET("/:id/receipt", middleware.AuthMiddleware(), middleware.RequireRole("kasir", "admin"), controllers.GetTransactionReceipt)
+
 		// Admin & Kasir - lihat detail transaksi
 		transaction.GET("/:id", middleware.AuthMiddleware(), controllers.GetTransactionByID)
 
