@@ -7,6 +7,7 @@ import (
 	menu_model "pos-go/models/menu_model"
 	promo_model "pos-go/models/promo_model"
 	transaction_model "pos-go/models/transaction_model"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -277,8 +278,8 @@ func (s TransactionService) UpdateTransactionStatus(id uuid.UUID, paymentStatus,
 	return &transaction, nil
 }
 
-// UpdateOrderStatusForRole mengubah order_status dengan aturan per role (kasir / koki)
-func (s TransactionService) UpdateOrderStatusForRole(id uuid.UUID, role string, newStatus string) (*transaction_model.Transaction, error) {
+// UpdateOrderStatusForRole mengubah order_status dengan aturan per role (kasir / koki). closedByUserID diisi saat kasir menandai completed (untuk laporan).
+func (s TransactionService) UpdateOrderStatusForRole(id uuid.UUID, role string, newStatus string, closedByUserID *uuid.UUID) (*transaction_model.Transaction, error) {
 	var tx transaction_model.Transaction
 	if err := config.DB.First(&tx, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -304,6 +305,11 @@ func (s TransactionService) UpdateOrderStatusForRole(id uuid.UUID, role string, 
 			if tx.PaymentStatus != "paid" {
 				return nil, errors.New("Transaksi belum berstatus paid, tidak dapat diselesaikan")
 			}
+		case "cancelled":
+			// Kasir boleh batalkan pesanan yang belum selesai: pending, cooking, atau ready
+			if current != "pending" && current != "cooking" && current != "ready" {
+				return nil, ErrInvalidStatus
+			}
 		default:
 			return nil, ErrInvalidStatus
 		}
@@ -320,7 +326,12 @@ func (s TransactionService) UpdateOrderStatusForRole(id uuid.UUID, role string, 
 		return nil, ErrInvalidStatus
 	}
 
-	if err := config.DB.Model(&tx).Update("order_status", newStatus).Error; err != nil {
+	updates := map[string]interface{}{"order_status": newStatus}
+	// Saat kasir menandai selesai (completed), simpan kasir yang memproses untuk laporan per kasir
+	if newStatus == "completed" && closedByUserID != nil {
+		updates["closed_by_user_id"] = closedByUserID
+	}
+	if err := config.DB.Model(&tx).Updates(updates).Error; err != nil {
 		return nil, ErrDatabaseError
 	}
 
@@ -331,8 +342,22 @@ func (s TransactionService) UpdateOrderStatusForRole(id uuid.UUID, role string, 
 	return &tx, nil
 }
 
-// ConfirmCashPaid - khusus kasir untuk konfirmasi pembayaran tunai
-func (s TransactionService) ConfirmCashPaid(id uuid.UUID) (*transaction_model.Transaction, error) {
+// CancelOrder membatalkan pesanan. Kasir atau Admin; status saat ini harus pending, cooking, atau ready.
+func (s TransactionService) CancelOrder(id uuid.UUID, role string) (*transaction_model.Transaction, error) {
+	role = strings.ToLower(strings.TrimSpace(role))
+	if role != "kasir" && role != "admin" {
+		return nil, ErrInvalidStatus
+	}
+	// Admin diperlakukan seperti kasir untuk aksi batalkan
+	effectiveRole := role
+	if role == "admin" {
+		effectiveRole = "kasir"
+	}
+	return s.UpdateOrderStatusForRole(id, effectiveRole, "cancelled", nil)
+}
+
+// ConfirmCashPaid - khusus kasir untuk konfirmasi pembayaran tunai. closedByUserID = user_id kasir yang login (untuk laporan per kasir).
+func (s TransactionService) ConfirmCashPaid(id uuid.UUID, closedByUserID *uuid.UUID) (*transaction_model.Transaction, error) {
 	var transaction transaction_model.Transaction
 	if err := config.DB.First(&transaction, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -352,9 +377,11 @@ func (s TransactionService) ConfirmCashPaid(id uuid.UUID) (*transaction_model.Tr
 		return nil, errors.New("Transaksi sudah dibatalkan")
 	}
 
-	if err := config.DB.Model(&transaction).Updates(map[string]interface{}{
-		"payment_status": "paid",
-	}).Error; err != nil {
+	updates := map[string]interface{}{"payment_status": "paid"}
+	if closedByUserID != nil {
+		updates["closed_by_user_id"] = closedByUserID
+	}
+	if err := config.DB.Model(&transaction).Updates(updates).Error; err != nil {
 		return nil, ErrDatabaseError
 	}
 

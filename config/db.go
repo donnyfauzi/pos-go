@@ -7,9 +7,10 @@ import (
 
 	category_model "pos-go/models/category_model"
 	menu_model "pos-go/models/menu_model"
+	promo_model "pos-go/models/promo_model"
+	settlement_model "pos-go/models/settlement_model"
 	transaction_model "pos-go/models/transaction_model"
 	user_model "pos-go/models/user_model"
-	promo_model "pos-go/models/promo_model"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -52,6 +53,7 @@ func ConnectDatabase() {
 		&transaction_model.Transaction{},
 		&transaction_model.TransactionItem{},
 		&promo_model.Promo{},
+		&settlement_model.Settlement{},
 	)
 	if err != nil {
 		log.Fatal("Migrasi gagal:", err)

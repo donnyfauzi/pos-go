@@ -151,7 +151,7 @@ func HandleMidtransNotification(c *gin.Context) {
 	c.JSON(200, gin.H{"status": "success"})
 }
 
-// ConfirmCashPaid - kasir konfirmasi pembayaran tunai
+// ConfirmCashPaid - kasir konfirmasi pembayaran tunai (closed_by_user_id diisi untuk laporan per kasir)
 func ConfirmCashPaid(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
@@ -160,7 +160,14 @@ func ConfirmCashPaid(c *gin.Context) {
 		return
 	}
 
-	tx, err := transactionService.ConfirmCashPaid(id)
+	var closedByUserID *uuid.UUID
+	if uid, exists := c.Get("user_id"); exists && uid != nil {
+		if parsed, err := uuid.Parse(uid.(string)); err == nil {
+			closedByUserID = &parsed
+		}
+	}
+
+	tx, err := transactionService.ConfirmCashPaid(id, closedByUserID)
 	if err != nil {
 		utils.ErrorResponseBadRequest(c, err.Error(), nil)
 		return
@@ -222,7 +229,16 @@ func UpdateOrderStatus(c *gin.Context) {
 	}
 	role, _ := roleVal.(string)
 
-	tx, err := transactionService.UpdateOrderStatusForRole(id, role, req.OrderStatus)
+	var closedByUserID *uuid.UUID
+	if role == "kasir" && req.OrderStatus == "completed" {
+		if uid, exists := c.Get("user_id"); exists && uid != nil {
+			if parsed, err := uuid.Parse(uid.(string)); err == nil {
+				closedByUserID = &parsed
+			}
+		}
+	}
+
+	tx, err := transactionService.UpdateOrderStatusForRole(id, role, req.OrderStatus, closedByUserID)
 	if err != nil {
 		if errors.Is(err, services.ErrTransactionNotFound) {
 			utils.ErrorResponseNotFound(c, "Transaksi tidak ditemukan")
@@ -237,4 +253,37 @@ func UpdateOrderStatus(c *gin.Context) {
 	}
 
 	utils.SuccessResponseOK(c, "Status pesanan berhasil diubah", tx)
+}
+
+// CancelOrder - kasir membatalkan pesanan (pending / cooking / ready -> cancelled)
+func CancelOrder(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		utils.ErrorResponseBadRequest(c, "ID transaksi tidak valid", nil)
+		return
+	}
+
+	roleVal, exists := c.Get("role")
+	if !exists {
+		utils.ErrorResponseUnauthorized(c, "Role tidak ditemukan")
+		return
+	}
+	role, _ := roleVal.(string)
+
+	tx, err := transactionService.CancelOrder(id, role)
+	if err != nil {
+		if errors.Is(err, services.ErrTransactionNotFound) {
+			utils.ErrorResponseNotFound(c, "Transaksi tidak ditemukan")
+			return
+		}
+		if errors.Is(err, services.ErrInvalidStatus) {
+			utils.ErrorResponseBadRequest(c, "Pesanan tidak dapat dibatalkan (status tidak sesuai atau sudah selesai)", nil)
+			return
+		}
+		utils.ErrorResponseInternal(c, "Gagal membatalkan pesanan")
+		return
+	}
+
+	utils.SuccessResponseOK(c, "Pesanan berhasil dibatalkan", tx)
 }

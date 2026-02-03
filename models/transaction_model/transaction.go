@@ -21,11 +21,12 @@ type Transaction struct {
 	TotalAmount   float64           `gorm:"type:decimal(15,2);not null;default:0" json:"total_amount"`         // Total setelah pajak
 	PaymentMethod string            `gorm:"type:varchar(50);not null" json:"payment_method"`                   // cash, credit_card, debit_card, e_wallet
 	PaymentStatus string            `gorm:"type:varchar(50);not null;default:'pending'" json:"payment_status"` // pending, paid, cancelled, expired
-	OrderStatus   string            `gorm:"type:varchar(50);not null;default:'pending'" json:"order_status"`   // pending, processing, completed, cancelled
-	Notes         string            `gorm:"type:text" json:"notes"`
-	ExpiredAt     *time.Time        `gorm:"type:timestamp" json:"expired_at"` // Waktu kadaluarsa untuk non-cash payment
-	Items         []TransactionItem `gorm:"foreignKey:TransactionID;constraint:OnDelete:CASCADE" json:"items"`
-	CreatedAt     time.Time         `json:"created_at"`
+	OrderStatus     string            `gorm:"type:varchar(50);not null;default:'pending'" json:"order_status"`   // pending, processing, completed, cancelled
+	ClosedByUserID  *uuid.UUID        `gorm:"type:uuid" json:"closed_by_user_id"`                                // kasir yang memproses (konfirmasi tunai / tandai selesai)
+	Notes           string            `gorm:"type:text" json:"notes"`
+	ExpiredAt       *time.Time        `gorm:"type:timestamp" json:"expired_at"` // Waktu kadaluarsa untuk non-cash payment
+	Items           []TransactionItem `gorm:"foreignKey:TransactionID;constraint:OnDelete:CASCADE" json:"items"`
+	CreatedAt       time.Time         `json:"created_at"`
 	UpdatedAt     time.Time         `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt    `gorm:"index" json:"-"`
 }
