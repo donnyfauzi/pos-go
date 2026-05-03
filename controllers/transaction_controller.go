@@ -2,10 +2,10 @@ package controllers
 
 import (
 	"errors"
-	"strings"
 	"pos-go/dto"
 	"pos-go/services"
 	"pos-go/utils"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
